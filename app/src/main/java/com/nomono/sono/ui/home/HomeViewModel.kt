@@ -23,9 +23,26 @@ enum class SortMode(val label: String) {
     NAME_ASC("Tên A-Z"),
 }
 
+enum class DebtFilter(val label: String) {
+    ALL("Tất cả"),
+    THEY_OWE_ME("Họ nợ tôi"),
+    I_OWE_THEM("Tôi nợ họ"),
+    SETTLED("Đã tất toán"),
+}
+
+fun List<Debt>.filterFor(filter: DebtFilter): List<Debt> = filter {
+    when (filter) {
+        DebtFilter.ALL -> true
+        DebtFilter.THEY_OWE_ME -> it.debtType == DebtType.THEY_OWE_ME && it.amount > 0
+        DebtFilter.I_OWE_THEM -> it.debtType == DebtType.I_OWE_THEM && it.amount > 0
+        DebtFilter.SETTLED -> it.amount == 0L
+    }
+}
+
 data class HomeUiState(
     val debts: List<Debt> = emptyList(),
     val sortMode: SortMode = SortMode.RECENT,
+    val debtFilter: DebtFilter = DebtFilter.ALL,
     val searchQuery: String = "",
     val totals: DebtTotals = DebtTotals(0L, 0L),
 )
@@ -33,14 +50,16 @@ data class HomeUiState(
 class HomeViewModel(private val repository: DebtRepository) : ViewModel() {
 
     private val sortMode = MutableStateFlow(SortMode.RECENT)
+    private val debtFilter = MutableStateFlow(DebtFilter.ALL)
     private val searchQuery = MutableStateFlow("")
 
     val uiState: StateFlow<HomeUiState> =
-        combine(repository.observeAll(), sortMode, searchQuery) { list, sort, query ->
+        combine(repository.observeAll(), sortMode, debtFilter, searchQuery) { list, sort, filter, query ->
+            val filtered = list.filterFor(filter)
             val visible = if (query.isBlank()) {
-                list
+                filtered
             } else {
-                list.filter { it.name.contains(query.trim(), ignoreCase = true) }
+                filtered.filter { it.name.contains(query.trim(), ignoreCase = true) }
             }
             val sorted = when (sort) {
                 SortMode.RECENT -> visible
@@ -50,6 +69,7 @@ class HomeViewModel(private val repository: DebtRepository) : ViewModel() {
             HomeUiState(
                 debts = sorted,
                 sortMode = sort,
+                debtFilter = filter,
                 searchQuery = query,
                 totals = computeTotals(list),
             )
@@ -57,6 +77,10 @@ class HomeViewModel(private val repository: DebtRepository) : ViewModel() {
 
     fun setSortMode(mode: SortMode) {
         sortMode.value = mode
+    }
+
+    fun setDebtFilter(filter: DebtFilter) {
+        debtFilter.value = filter
     }
 
     fun setSearchQuery(query: String) {

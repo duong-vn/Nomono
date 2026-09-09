@@ -163,6 +163,7 @@ fun HomeScreen(
                     .padding(horizontal = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                FilterButton(current = state.debtFilter, onSelect = viewModel::setDebtFilter)
                 SortButton(current = state.sortMode, onSelect = viewModel::setSortMode)
                 Spacer(Modifier.weight(1f))
                 Text(
@@ -292,6 +293,41 @@ private fun ThemeMenu(
                     if (mode != current) onSelect(mode)
                 },
             )
+        }
+    }
+}
+
+@Composable
+private fun FilterButton(current: DebtFilter, onSelect: (DebtFilter) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box {
+        TextButton(onClick = { expanded = true }) {
+            Text(current.label)
+            Spacer(Modifier.width(2.dp))
+            Icon(
+                Icons.Filled.KeyboardArrowDown,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+            )
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            DebtFilter.entries.forEach { filter ->
+                DropdownMenuItem(
+                    text = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(filter.label, Modifier.weight(1f))
+                            if (filter == current) {
+                                Text("✓", color = MaterialTheme.colorScheme.primary)
+                            }
+                        }
+                    },
+                    onClick = {
+                        expanded = false
+                        onSelect(filter)
+                    },
+                )
+            }
         }
     }
 }
