@@ -14,19 +14,20 @@ data class SonoColors(
 )
 
 val LightSonoColors = SonoColors(
-    oweMe = Color(0xFF2E7D32),
-    oweMeContainer = Color(0xFFE5F1E7),
-    onOweMeContainer = Color(0xFF1B5E20),
+    oweMe = Color(0xFF1B873F),
+    oweMeContainer = Color(0xFFE6F4EA),
+    onOweMeContainer = Color(0xFF0F5224),
     iOwe = Color(0xFFC62828),
-    iOweContainer = Color(0xFFFBE9E9),
-    onIOweContainer = Color(0xFFB71C1C),
+    iOweContainer = Color(0xFFFDE8E8),
+    onIOweContainer = Color(0xFF8E1B1B),
 )
 
 val DarkSonoColors = SonoColors(
     oweMe = Color(0xFF81C784),
-    oweMeContainer = Color(0xFF1C3320),
+    oweMeContainer = Color(0xFF13321B),
     onOweMeContainer = Color(0xFFA5D6A7),
-    iOwe = Color(0xFFE57373),
-    iOweContainer = Color(0xFF3A2020),
-    onIOweContainer = Color(0xFFEF9A9A),
+    iOwe = Color(0xFFEF5350),
+    iOweContainer = Color(0xFF3C1414),
+    onIOweContainer = Color(0xFFFFB4AB),
 )
+

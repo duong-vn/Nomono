@@ -29,7 +29,8 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.ui.res.painterResource
+import com.nomono.sono.R
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FloatingActionButton
@@ -252,8 +253,16 @@ private fun HomeTopBar(
         }
 
         Box {
+            val (iconRes, desc) = when (themeMode) {
+                ThemeMode.LIGHT -> R.drawable.ic_light_mode to "Chế độ sáng"
+                ThemeMode.DARK -> R.drawable.ic_dark_mode to "Chế độ tối"
+                ThemeMode.SYSTEM -> R.drawable.ic_theme_system to "Theo hệ thống"
+            }
             IconButton(onClick = { themeMenuOpen = true }) {
-                Icon(Icons.Filled.Settings, contentDescription = "Giao diện")
+                Icon(
+                    painter = painterResource(iconRes),
+                    contentDescription = desc,
+                )
             }
             ThemeMenu(
                 expanded = themeMenuOpen,
@@ -272,25 +281,43 @@ private fun ThemeMenu(
     onDismiss: () -> Unit,
     onSelect: (ThemeMode) -> Unit,
 ) {
+    data class ThemeOption(val mode: ThemeMode, val label: String, val iconRes: Int)
+
     val options = listOf(
-        ThemeMode.SYSTEM to "Theo hệ thống",
-        ThemeMode.LIGHT to "Sáng",
-        ThemeMode.DARK to "Tối",
+        ThemeOption(ThemeMode.SYSTEM, "Theo hệ thống", R.drawable.ic_theme_system),
+        ThemeOption(ThemeMode.LIGHT, "Sáng", R.drawable.ic_light_mode),
+        ThemeOption(ThemeMode.DARK, "Tối", R.drawable.ic_dark_mode),
     )
     DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
-        options.forEach { (mode, label) ->
+        options.forEach { option ->
             DropdownMenuItem(
+                leadingIcon = {
+                    Icon(
+                        painter = painterResource(option.iconRes),
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = if (option.mode == current) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                    )
+                },
                 text = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(label, Modifier.weight(1f))
-                        if (mode == current) {
+                        Text(
+                            text = option.label,
+                            modifier = Modifier.weight(1f),
+                            fontWeight = if (option.mode == current) FontWeight.SemiBold else FontWeight.Normal,
+                        )
+                        if (option.mode == current) {
                             Text("✓", color = MaterialTheme.colorScheme.primary)
                         }
                     }
                 },
                 onClick = {
                     onDismiss()
-                    if (mode != current) onSelect(mode)
+                    if (option.mode != current) onSelect(option.mode)
                 },
             )
         }
