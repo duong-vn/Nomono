@@ -9,7 +9,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -30,9 +32,13 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.nomono.sono.R
+import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -73,7 +79,12 @@ import com.nomono.sono.data.TransactionKind
 import com.nomono.sono.ui.components.Avatar
 import com.nomono.sono.ui.edit.DebtEditorSheet
 import com.nomono.sono.ui.theme.LocalSonoColors
+import com.nomono.sono.util.CalculatorOperator
+import com.nomono.sono.util.CalculatorResult
 import com.nomono.sono.util.DebtTotals
+import com.nomono.sono.util.applyCalculatorOperation
+import com.nomono.sono.util.formatCalculatorValue
+import com.nomono.sono.util.parseCalculatorInput
 import com.nomono.sono.util.VndFormat
 import kotlinx.coroutines.launch
 
@@ -88,6 +99,7 @@ fun HomeScreen(
 
     var editingId by rememberSaveable { mutableStateOf<Long?>(null) }
     var showEditor by rememberSaveable { mutableStateOf(false) }
+    var showCalculator by rememberSaveable { mutableStateOf(false) }
     var searchActive by rememberSaveable { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
@@ -138,6 +150,7 @@ fun HomeScreen(
                     searchActive = !searchActive
                     if (!searchActive) viewModel.setSearchQuery("")
                 },
+                onCalculatorClick = { showCalculator = true },
                 onThemeChange = { mode -> scope.launch { themePreferences.setThemeMode(mode) } },
             )
 
@@ -191,6 +204,10 @@ fun HomeScreen(
         }
     }
 
+    if (showCalculator) {
+        CalculatorSheet(onDismiss = { showCalculator = false })
+    }
+
     if (showEditor) {
         DebtEditorSheet(
             debt = editingDebt,
@@ -227,6 +244,7 @@ private fun HomeTopBar(
     themeMode: ThemeMode,
     searchActive: Boolean,
     onSearchToggle: () -> Unit,
+    onCalculatorClick: () -> Unit,
     onThemeChange: (ThemeMode) -> Unit,
 ) {
     var themeMenuOpen by remember { mutableStateOf(false) }
@@ -252,6 +270,13 @@ private fun HomeTopBar(
             )
         }
 
+        IconButton(
+            onClick = onCalculatorClick,
+            modifier = Modifier.semantics { contentDescription = "Máy tính" },
+        ) {
+            Text("÷", style = MaterialTheme.typography.titleLarge)
+        }
+
         Box {
             val (iconRes, desc) = when (themeMode) {
                 ThemeMode.LIGHT -> R.drawable.ic_light_mode to "Chế độ sáng"
@@ -270,6 +295,183 @@ private fun HomeTopBar(
                 onDismiss = { themeMenuOpen = false },
                 onSelect = onThemeChange,
             )
+        }
+    }
+}
+
+@Composable
+private fun CalculatorSheet(onDismiss: () -> Unit) {
+    var display by remember { mutableStateOf("0") }
+    var expression by remember { mutableStateOf("") }
+    var accumulator by remember { mutableStateOf<java.math.BigDecimal?>(null) }
+    var pendingOperator by remember { mutableStateOf<CalculatorOperator?>(null) }
+    var replaceDisplay by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    fun reset() {
+        display = "0"
+        expression = ""
+        accumulator = null
+        pendingOperator = null
+        replaceDisplay = false
+        error = null
+    }
+
+    fun prepareInput() {
+        if (error != null || (replaceDisplay && pendingOperator == null)) {
+            accumulator = null
+            pendingOperator = null
+            expression = ""
+            error = null
+        }
+        if (replaceDisplay) display = "0"
+        replaceDisplay = false
+    }
+
+    fun inputDigit(digit: String) {
+        prepareInput()
+        val candidate = if (display == "0") digit else display + digit
+        if (candidate.substringBefore('.').removePrefix("-").length <= 15) display = candidate
+    }
+
+    fun inputDecimal() {
+        prepareInput()
+        if ('.' !in display) display += "."
+    }
+
+    fun toggleSign() {
+        if (error != null) return
+        display = when (display) {
+            "0" -> "0"
+            else -> if (display.startsWith('-')) display.drop(1) else "-$display"
+        }
+    }
+
+    fun apply(operator: CalculatorOperator?) {
+        val currentText = display.removeSuffix(".")
+        val current = parseCalculatorInput(currentText) ?: return
+        val previous = accumulator
+        val pending = pendingOperator
+        if (previous != null && pending != null) {
+            val currentExpression = "$expression $currentText"
+            when (val result = applyCalculatorOperation(previous, pending, current)) {
+                is CalculatorResult.Error -> {
+                    error = result.message
+                    return
+                }
+                is CalculatorResult.Value -> {
+                    accumulator = result.value
+                    display = formatCalculatorValue(result.value)
+                    expression = if (operator == null) "$currentExpression =" else "${formatCalculatorValue(result.value)} ${operator.symbol}"
+                }
+            }
+        } else {
+            accumulator = current
+            expression = if (operator == null) "" else "$currentText ${operator.symbol}"
+        }
+        error = null
+        pendingOperator = operator
+        replaceDisplay = true
+        if (operator == null) accumulator = null
+    }
+
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding()
+                .padding(horizontal = 20.dp, vertical = 8.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Máy tính", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Filled.Close, contentDescription = "Đóng máy tính")
+                }
+            }
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.Bottom,
+            ) {
+                Text(
+                    text = expression,
+                    style = MaterialTheme.typography.titleLarge.copy(fontFeatureSettings = "tnum"),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = error ?: display,
+                    style = MaterialTheme.typography.displayMedium.copy(fontFeatureSettings = "tnum"),
+                    color = if (error != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onBackground,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Spacer(Modifier.height(24.dp))
+            listOf(
+                listOf("AC", "⌫", "±", "÷"),
+                listOf("7", "8", "9", "×"),
+                listOf("4", "5", "6", "−"),
+                listOf("1", "2", "3", "+"),
+                listOf("0", ".", "=", ""),
+            ).forEach { row ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    row.forEach { key ->
+                        if (key.isEmpty()) {
+                            Spacer(Modifier.weight(1f))
+                        } else {
+                            CalculatorKey(
+                                label = key,
+                                emphasized = key in setOf("÷", "×", "−", "+", "="),
+                                onClick = {
+                                    when (key) {
+                                        "AC" -> reset()
+                                        "⌫" -> if (error == null && !replaceDisplay) {
+                                            display = display.dropLast(1).ifEmpty { "0" }
+                                        }
+                                        "±" -> toggleSign()
+                                        "." -> inputDecimal()
+                                        "÷" -> apply(CalculatorOperator.DIVIDE)
+                                        "×" -> apply(CalculatorOperator.MULTIPLY)
+                                        "−" -> apply(CalculatorOperator.SUBTRACT)
+                                        "+" -> apply(CalculatorOperator.ADD)
+                                        "=" -> apply(null)
+                                        else -> inputDigit(key)
+                                    }
+                                },
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.height(10.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun RowScope.CalculatorKey(label: String, emphasized: Boolean, onClick: () -> Unit) {
+    val modifier = Modifier
+        .weight(1f)
+        .height(64.dp)
+    if (emphasized) {
+        Button(onClick = onClick, modifier = modifier) {
+            Text(label, style = MaterialTheme.typography.headlineSmall)
+        }
+    } else {
+        FilledTonalButton(onClick = onClick, modifier = modifier) {
+            Text(label, style = MaterialTheme.typography.headlineSmall)
         }
     }
 }
