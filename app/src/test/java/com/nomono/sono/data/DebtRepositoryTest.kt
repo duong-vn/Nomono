@@ -33,6 +33,17 @@ class DebtRepositoryTest {
         assertEquals(1, dao.deletedDebts)
     }
 
+    @Test
+    fun overpayment_flips_debt_direction() = runTest {
+        val debt = debt(amount = 100_000)
+        val dao = FakeDebtDao(debt)
+
+        DebtRepository(dao).recordTransaction(debt.id, 150_000, TransactionKind.PAYMENT)
+
+        assertEquals(50_000L, dao.debt?.amount)
+        assertEquals(DebtType.I_OWE_THEM, dao.debt?.debtType)
+    }
+
     private fun debt(amount: Long = 100_000) = Debt(
         id = 1,
         name = "An",
@@ -66,6 +77,10 @@ class DebtRepositoryTest {
         override fun observeTransactions(debtId: Long): Flow<List<DebtTransaction>> = emptyFlow()
 
         override suspend fun insertTransaction(transaction: DebtTransaction): Long = transaction.id
+
+        override suspend fun recordTransaction(transaction: DebtTransaction, debt: Debt) {
+            update(debt)
+        }
 
         override suspend fun deleteTransactions(debtId: Long) {
             hasTransactions = false

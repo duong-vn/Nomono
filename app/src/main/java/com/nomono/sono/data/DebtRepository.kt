@@ -40,17 +40,17 @@ class DebtRepository(private val dao: DebtDao) {
     suspend fun recordTransaction(debtId: Long, amount: Long, kind: TransactionKind) {
         val debt = dao.getById(debtId) ?: return
         val now = System.currentTimeMillis()
-        dao.insertTransaction(
-            DebtTransaction(
+        val balance = applyTransaction(debt.amount, debt.debtType, kind, amount)
+        dao.recordTransaction(
+            transaction = DebtTransaction(
                 debtId = debtId,
                 amount = amount,
                 kind = kind,
                 createdAt = now,
             ),
-        )
-        dao.update(
-            debt.copy(
-                amount = applyTransaction(debt.amount, kind, amount),
+            debt = debt.copy(
+                amount = balance.amount,
+                debtType = balance.debtType,
                 updatedAt = now,
             ),
         )

@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
@@ -30,6 +31,12 @@ interface DebtDao {
 
     @Insert
     suspend fun insertTransaction(transaction: DebtTransaction): Long
+
+    @Transaction
+    suspend fun recordTransaction(transaction: DebtTransaction, debt: Debt) {
+        insertTransaction(transaction)
+        update(debt)
+    }
 
     @Query("DELETE FROM debt_transactions WHERE debtId = :debtId")
     suspend fun deleteTransactions(debtId: Long)

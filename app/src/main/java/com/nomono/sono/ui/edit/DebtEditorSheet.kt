@@ -317,11 +317,14 @@ fun DebtEditorSheet(
             onDismiss = { showTransactionDialog = false },
             onConfirm = { txAmount, kind ->
                 onRecordTransaction(debt.id, txAmount, kind)
-                amountText = applyTransaction(
+                val balance = applyTransaction(
                     VndFormat.parseDigits(amountText),
+                    debtType,
                     kind,
                     txAmount,
-                ).toString()
+                )
+                amountText = balance.amount.toString()
+                debtTypeName = balance.debtType.name
                 showTransactionDialog = false
             },
         )
