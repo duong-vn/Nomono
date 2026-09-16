@@ -58,13 +58,11 @@ class DebtRepository(private val dao: DebtDao) {
 
     suspend fun clear(id: Long) {
         val existing = dao.getById(id) ?: return
-        dao.deleteTransactions(id)
-        dao.update(existing.copy(amount = 0, updatedAt = System.currentTimeMillis()))
+        dao.clearDebt(existing.copy(amount = 0, updatedAt = System.currentTimeMillis()))
     }
 
     suspend fun delete(id: Long) {
         val existing = dao.getById(id) ?: return
-        dao.deleteTransactions(id)
-        dao.delete(existing)
+        dao.deleteDebt(existing)
     }
 }

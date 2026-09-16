@@ -108,7 +108,9 @@ fun DebtEditorSheet(
     var showTransactionDialog by remember { mutableStateOf(false) }
     var editIdentity by rememberSaveable { mutableStateOf(debt == null) }
 
-    val debtType = runCatching { DebtType.valueOf(debtTypeName) }.getOrDefault(DebtType.THEY_OWE_ME)
+    val debtType = remember(debtTypeName) {
+        runCatching { DebtType.valueOf(debtTypeName) }.getOrDefault(DebtType.THEY_OWE_ME)
+    }
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val nameFocus = remember { FocusRequester() }
@@ -480,7 +482,9 @@ private fun TransactionDialog(
     var kindName by rememberSaveable { mutableStateOf(TransactionKind.PAYMENT.name) }
     var amountError by remember { mutableStateOf(false) }
 
-    val kind = runCatching { TransactionKind.valueOf(kindName) }.getOrDefault(TransactionKind.PAYMENT)
+    val kind = remember(kindName) {
+        runCatching { TransactionKind.valueOf(kindName) }.getOrDefault(TransactionKind.PAYMENT)
+    }
     val labels = kindLabels(debt.debtType)
 
     AlertDialog(
@@ -547,8 +551,12 @@ private fun TransactionDialog(
     )
 }
 
+private val txTimeFormatter = ThreadLocal.withInitial {
+    SimpleDateFormat("dd/MM HH:mm", Locale.getDefault())
+}
+
 private fun formatTxTime(timestamp: Long): String =
-    SimpleDateFormat("dd/MM HH:mm", Locale.getDefault()).format(Date(timestamp))
+    txTimeFormatter.get().format(Date(timestamp))
 
 @Composable
 private fun AvatarField(uri: String?, name: String, onChange: (String?) -> Unit) {

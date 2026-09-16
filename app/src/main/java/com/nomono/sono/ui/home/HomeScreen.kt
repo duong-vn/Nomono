@@ -104,11 +104,19 @@ fun HomeScreen(
 
     val scope = rememberCoroutineScope()
 
-    val editingDebt: Debt? = editingId?.let { id -> state.debts.firstOrNull { it.id == id } }
+    val editingDebt: Debt? = remember(editingId, state.debts) {
+        editingId?.let { id -> state.debts.firstOrNull { it.id == id } }
+    }
 
-    val editingTransactions by produceState(initialValue = emptyList<DebtTransaction>(), editingId) {
+    // Only collect transactions while the editor is open; otherwise this keeps a
+    // Room observer alive for no reason.
+    val editingTransactions by produceState(
+        initialValue = emptyList<DebtTransaction>(),
+        editingId,
+        showEditor,
+    ) {
         val id = editingId
-        if (id == null) {
+        if (id == null || !showEditor) {
             value = emptyList()
         } else {
             repository.observeTransactions(id).collect { value = it }
@@ -196,7 +204,7 @@ fun HomeScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(bottom = 88.dp),
                 ) {
-                    items(state.debts, key = { it.id }) { debt ->
+                    items(state.debts, key = { it.id }, contentType = { "debt" }) { debt ->
                         DebtRow(debt = debt, onClick = { openEdit(debt) })
                     }
                 }
@@ -299,9 +307,17 @@ private fun HomeTopBar(
     }
 }
 
+private val CalculatorRows = listOf(
+    listOf("AC", "⌫", "±", "÷"),
+    listOf("7", "8", "9", "×"),
+    listOf("4", "5", "6", "−"),
+    listOf("1", "2", "3", "+"),
+    listOf("0", ".", "=", ""),
+)
+private val CalculatorEmphasized = setOf("÷", "×", "−", "+", "=")
+
 @Composable
-private fun CalculatorSheet(onDismiss: () -> Unit) {
-    var display by remember { mutableStateOf("0") }
+private fun CalculatorSheet(onDismiss: () -> Unit) {    var display by remember { mutableStateOf("0") }
     var expression by remember { mutableStateOf("") }
     var accumulator by remember { mutableStateOf<java.math.BigDecimal?>(null) }
     var pendingOperator by remember { mutableStateOf<CalculatorOperator?>(null) }
@@ -416,13 +432,7 @@ private fun CalculatorSheet(onDismiss: () -> Unit) {
                 )
             }
             Spacer(Modifier.height(24.dp))
-            listOf(
-                listOf("AC", "⌫", "±", "÷"),
-                listOf("7", "8", "9", "×"),
-                listOf("4", "5", "6", "−"),
-                listOf("1", "2", "3", "+"),
-                listOf("0", ".", "=", ""),
-            ).forEach { row ->
+            CalculatorRows.forEach { row ->
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -433,7 +443,7 @@ private fun CalculatorSheet(onDismiss: () -> Unit) {
                         } else {
                             CalculatorKey(
                                 label = key,
-                                emphasized = key in setOf("÷", "×", "−", "+", "="),
+                                emphasized = key in CalculatorEmphasized,
                                 onClick = {
                                     when (key) {
                                         "AC" -> reset()
@@ -476,6 +486,14 @@ private fun RowScope.CalculatorKey(label: String, emphasized: Boolean, onClick: 
     }
 }
 
+private data class ThemeOption(val mode: ThemeMode, val label: String, val iconRes: Int)
+
+private val ThemeOptions = listOf(
+    ThemeOption(ThemeMode.SYSTEM, "Theo hệ thống", R.drawable.ic_theme_system),
+    ThemeOption(ThemeMode.LIGHT, "Sáng", R.drawable.ic_light_mode),
+    ThemeOption(ThemeMode.DARK, "Tối", R.drawable.ic_dark_mode),
+)
+
 @Composable
 private fun ThemeMenu(
     expanded: Boolean,
@@ -483,15 +501,8 @@ private fun ThemeMenu(
     onDismiss: () -> Unit,
     onSelect: (ThemeMode) -> Unit,
 ) {
-    data class ThemeOption(val mode: ThemeMode, val label: String, val iconRes: Int)
-
-    val options = listOf(
-        ThemeOption(ThemeMode.SYSTEM, "Theo hệ thống", R.drawable.ic_theme_system),
-        ThemeOption(ThemeMode.LIGHT, "Sáng", R.drawable.ic_light_mode),
-        ThemeOption(ThemeMode.DARK, "Tối", R.drawable.ic_dark_mode),
-    )
     DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
-        options.forEach { option ->
+        ThemeOptions.forEach { option ->
             DropdownMenuItem(
                 leadingIcon = {
                     Icon(

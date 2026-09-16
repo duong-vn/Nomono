@@ -10,10 +10,14 @@ import com.nomono.sono.data.DebtType
 import com.nomono.sono.data.TransactionKind
 import com.nomono.sono.util.DebtTotals
 import com.nomono.sono.util.computeTotals
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -47,6 +51,7 @@ data class HomeUiState(
     val totals: DebtTotals = DebtTotals(0L, 0L),
 )
 
+@OptIn(FlowPreview::class)
 class HomeViewModel(private val repository: DebtRepository) : ViewModel() {
 
     private val sortMode = MutableStateFlow(SortMode.RECENT)
@@ -54,17 +59,25 @@ class HomeViewModel(private val repository: DebtRepository) : ViewModel() {
     private val searchQuery = MutableStateFlow("")
 
     val uiState: StateFlow<HomeUiState> =
-        combine(repository.observeAll(), sortMode, debtFilter, searchQuery) { list, sort, filter, query ->
+        combine(
+            repository.observeAll(),
+            sortMode,
+            debtFilter,
+            // Don't re-filter/sort on every keystroke while typing fast.
+            searchQuery.debounce(150),
+        ) { list, sort, filter, query ->
             val filtered = list.filterFor(filter)
-            val visible = if (query.isBlank()) {
+            val q = query.trim()
+            val visible = if (q.isEmpty()) {
                 filtered
             } else {
-                filtered.filter { it.name.contains(query.trim(), ignoreCase = true) }
+                filtered.filter { it.name.contains(q, ignoreCase = true) }
             }
             val sorted = when (sort) {
                 SortMode.RECENT -> visible
                 SortMode.AMOUNT_DESC -> visible.sortedByDescending { it.amount }
-                SortMode.NAME_ASC -> visible.sortedBy { it.name.lowercase() }
+                // compareBy avoids a lowercase() allocation per element.
+                SortMode.NAME_ASC -> visible.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })
             }
             HomeUiState(
                 debts = sorted,
@@ -73,7 +86,8 @@ class HomeViewModel(private val repository: DebtRepository) : ViewModel() {
                 searchQuery = query,
                 totals = computeTotals(list),
             )
-        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
+        }.flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
 
     fun setSortMode(mode: SortMode) {
         sortMode.value = mode

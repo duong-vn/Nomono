@@ -40,4 +40,16 @@ interface DebtDao {
 
     @Query("DELETE FROM debt_transactions WHERE debtId = :debtId")
     suspend fun deleteTransactions(debtId: Long)
+
+    @Transaction
+    suspend fun clearDebt(debt: Debt) {
+        deleteTransactions(debt.id)
+        update(debt)
+    }
+
+    @Transaction
+    suspend fun deleteDebt(debt: Debt) {
+        deleteTransactions(debt.id)
+        delete(debt)
+    }
 }

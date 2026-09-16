@@ -26,6 +26,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.material3.Text
 import androidx.compose.material3.MaterialTheme
+import android.util.LruCache
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 private val AvatarPalette = listOf(
     Color(0xFF00696D),
@@ -46,6 +49,20 @@ fun avatarColorFor(name: String): Color =
 private fun initialOf(name: String): String =
     name.trim().firstOrNull()?.uppercaseChar()?.toString() ?: "?"
 
+// Cache decoded avatars so scrolling doesn't re-decode the same uri on every
+// recomposition. Count-based (32 entries); each entry is already downscaled to ≤512px.
+private val avatarCache = object : LruCache<String, ImageBitmap>(32) {
+    override fun sizeOf(key: String, value: ImageBitmap): Int = 1
+}
+
+private fun cachedAvatar(uri: String): ImageBitmap? = synchronized(avatarCache) {
+    avatarCache.get(uri)
+}
+
+private fun cacheAvatar(uri: String, image: ImageBitmap) = synchronized(avatarCache) {
+    avatarCache.put(uri, image)
+}
+
 @Composable
 fun Avatar(
     name: String,
@@ -53,8 +70,15 @@ fun Avatar(
     size: Dp,
 ) {
     val context = LocalContext.current
-    val image by produceState<ImageBitmap?>(initialValue = null, uri) {
-        value = if (uri != null) loadAvatarBitmap(context, uri) else null
+    // IO-bound decode must not run on the main thread (produceState uses Main).
+    val image by produceState<ImageBitmap?>(initialValue = uri?.let(::cachedAvatar), uri) {
+        value = if (uri == null) {
+            null
+        } else {
+            cachedAvatar(uri) ?: withContext(Dispatchers.IO) {
+                loadAvatarBitmap(context, uri)?.also { cacheAvatar(uri, it) }
+            }
+        }
     }
 
     val background = avatarColorFor(name)
