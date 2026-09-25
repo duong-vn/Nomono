@@ -536,11 +536,11 @@ private fun TransactionDialog(
     onConfirm: (amount: Long, kind: TransactionKind) -> Unit,
 ) {
     var amountText by rememberSaveable { mutableStateOf("") }
-    var kindName by rememberSaveable { mutableStateOf(TransactionKind.PAYMENT.name) }
+    var kindName by rememberSaveable { mutableStateOf(TransactionKind.ADD.name) }
     var amountError by remember { mutableStateOf(false) }
 
     val kind = remember(kindName) {
-        runCatching { TransactionKind.valueOf(kindName) }.getOrDefault(TransactionKind.PAYMENT)
+        runCatching { TransactionKind.valueOf(kindName) }.getOrDefault(TransactionKind.ADD)
     }
     val labels = kindLabels(debt.debtType)
 
