@@ -3,7 +3,8 @@ package com.nomono.sono.ui.home
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -38,9 +39,12 @@ import com.nomono.sono.R
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -137,13 +141,13 @@ fun HomeScreen(
         modifier = Modifier.fillMaxSize(),
         containerColor = MaterialTheme.colorScheme.background,
         floatingActionButton = {
-            FloatingActionButton(
+            ExtendedFloatingActionButton(
                 onClick = ::openAdd,
+                icon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                text = { Text("Thêm nợ", fontWeight = FontWeight.SemiBold) },
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
-            ) {
-                Icon(Icons.Filled.Add, contentDescription = "Thêm khoản nợ")
-            }
+            )
         },
     ) { padding ->
         Column(
@@ -182,8 +186,9 @@ fun HomeScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 8.dp),
+                    .padding(horizontal = 12.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 FilterButton(current = state.debtFilter, onSelect = viewModel::setDebtFilter)
                 SortButton(current = state.sortMode, onSelect = viewModel::setSortMode)
@@ -191,18 +196,18 @@ fun HomeScreen(
                 Text(
                     text = "${state.debts.size} người",
                     style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
             if (state.debts.isEmpty()) {
                 EmptyState(query = state.searchQuery, filter = state.debtFilter, onAdd = ::openAdd)
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(bottom = 88.dp),
+                    contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 96.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     items(state.debts, key = { it.id }, contentType = { "debt" }) { debt ->
                         DebtRow(debt = debt, onClick = { openEdit(debt) })
@@ -267,7 +272,8 @@ private fun HomeTopBar(
     ) {
         Text(
             text = "Sổ Nợ",
-            style = MaterialTheme.typography.titleLarge,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(horizontal = 12.dp),
         )
         Spacer(Modifier.weight(1f))
@@ -543,15 +549,22 @@ private fun FilterButton(current: DebtFilter, onSelect: (DebtFilter) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
 
     Box {
-        TextButton(onClick = { expanded = true }) {
-            Text(current.label)
-            Spacer(Modifier.width(2.dp))
-            Icon(
-                Icons.Filled.KeyboardArrowDown,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp),
-            )
-        }
+        AssistChip(
+            onClick = { expanded = true },
+            label = { Text(current.label, fontWeight = FontWeight.SemiBold) },
+            trailingIcon = {
+                Icon(
+                    Icons.Filled.KeyboardArrowDown,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+            },
+            colors = AssistChipDefaults.assistChipColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                labelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            ),
+            border = null,
+        )
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             DebtFilter.entries.forEach { filter ->
                 DropdownMenuItem(
@@ -578,15 +591,17 @@ private fun SortButton(current: SortMode, onSelect: (SortMode) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
 
     Box {
-        TextButton(onClick = { expanded = true }) {
-            Text(current.label)
-            Spacer(Modifier.width(2.dp))
-            Icon(
-                Icons.Filled.KeyboardArrowDown,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp),
-            )
-        }
+        AssistChip(
+            onClick = { expanded = true },
+            label = { Text(current.label) },
+            trailingIcon = {
+                Icon(
+                    Icons.Filled.KeyboardArrowDown,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+            },
+        )
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             SortMode.entries.forEach { mode ->
                 DropdownMenuItem(
@@ -646,25 +661,29 @@ private fun SummaryHeader(totals: DebtTotals, hasAny: Boolean) {
     Column(
         Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 12.dp, vertical = 8.dp),
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             StatCard(
                 label = "Họ nợ bạn",
                 amount = totals.oweMe,
                 sign = "+",
+                icon = "↓",
                 contentColor = sono.oweMe,
                 containerColor = sono.oweMeContainer,
                 labelColor = sono.onOweMeContainer,
+                accentColor = sono.oweMe,
                 modifier = Modifier.weight(1f),
             )
             StatCard(
                 label = "Bạn nợ",
                 amount = totals.iOwe,
                 sign = "−",
+                icon = "↑",
                 contentColor = sono.iOwe,
                 containerColor = sono.iOweContainer,
                 labelColor = sono.onIOweContainer,
+                accentColor = sono.iOwe,
                 modifier = Modifier.weight(1f),
             )
         }
@@ -680,25 +699,32 @@ private fun SummaryHeader(totals: DebtTotals, hasAny: Boolean) {
                 net < 0 -> "−${VndFormat.format(-net)}"
                 else -> "0 ₫"
             }
-            Row(
+            Surface(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 10.dp),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically,
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                tonalElevation = 1.dp,
             ) {
-                Text(
-                    text = "Chênh lệch",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    text = netText,
-                    style = MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = "tnum"),
-                    fontWeight = FontWeight.SemiBold,
-                    color = netColor,
-                )
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = "Chênh lệch ròng",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        text = netText,
+                        style = MaterialTheme.typography.titleMedium.copy(fontFeatureSettings = "tnum"),
+                        fontWeight = FontWeight.Bold,
+                        color = netColor,
+                    )
+                }
             }
         }
     }
@@ -709,31 +735,61 @@ private fun StatCard(
     label: String,
     amount: Long,
     sign: String,
+    icon: String,
     contentColor: Color,
     containerColor: Color,
     labelColor: Color,
+    accentColor: Color,
     modifier: Modifier,
 ) {
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(20.dp),
         color = containerColor,
+        tonalElevation = 2.dp,
+        shadowElevation = 4.dp,
     ) {
-        Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelMedium,
-                color = labelColor,
+        Column {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(5.dp)
+                    .background(accentColor),
             )
-            Spacer(Modifier.height(2.dp))
-            Text(
-                text = "$sign${VndFormat.format(amount)}",
-                style = MaterialTheme.typography.titleMedium.copy(fontFeatureSettings = "tnum"),
-                fontWeight = FontWeight.Bold,
-                color = contentColor,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Surface(
+                        shape = CircleShape,
+                        color = accentColor,
+                        modifier = Modifier.size(26.dp),
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(
+                                text = icon,
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White,
+                            )
+                        }
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = labelColor,
+                    )
+                }
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = "$sign${VndFormat.format(amount)}",
+                    style = MaterialTheme.typography.titleLarge.copy(fontFeatureSettings = "tnum"),
+                    fontWeight = FontWeight.Bold,
+                    color = contentColor,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
     }
 }
@@ -743,39 +799,57 @@ private fun DebtRow(debt: Debt, onClick: () -> Unit) {
     val sono = LocalSonoColors.current
     val isOweMe = debt.debtType == DebtType.THEY_OWE_ME
     val color = if (isOweMe) sono.oweMe else sono.iOwe
+    val pillContainer = if (isOweMe) sono.oweMeContainer else sono.iOweContainer
     val sign = if (isOweMe) "+" else "−"
     val direction = if (isOweMe) "Họ nợ bạn" else "Bạn nợ"
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClickLabel = "Chỉnh sửa ${debt.name}", onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        ),
+        border = BorderStroke(1.dp, color.copy(alpha = 0.45f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {
-        Avatar(name = debt.name, uri = debt.avatarUri, size = 44.dp)
-        Spacer(Modifier.width(14.dp))
-        Column(Modifier.weight(1f)) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Avatar(name = debt.name, uri = debt.avatarUri, size = 48.dp)
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = debt.name,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(Modifier.height(5.dp))
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = pillContainer,
+                ) {
+                    Text(
+                        text = direction,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = color,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                    )
+                }
+            }
+            Spacer(Modifier.width(8.dp))
             Text(
-                text = debt.name,
-                style = MaterialTheme.typography.bodyLarge,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Spacer(Modifier.height(2.dp))
-            Text(
-                text = direction,
-                style = MaterialTheme.typography.labelMedium,
+                text = "$sign${VndFormat.format(debt.amount)}",
+                style = MaterialTheme.typography.titleLarge.copy(fontFeatureSettings = "tnum"),
+                fontWeight = FontWeight.Bold,
                 color = color,
+                maxLines = 1,
             )
         }
-        Text(
-            text = "$sign${VndFormat.format(debt.amount)}",
-            style = MaterialTheme.typography.titleMedium.copy(fontFeatureSettings = "tnum"),
-            fontWeight = FontWeight.SemiBold,
-            color = color,
-            maxLines = 1,
-        )
     }
 }
 
@@ -790,15 +864,18 @@ private fun EmptyState(query: String, filter: DebtFilter, onAdd: () -> Unit) {
         verticalArrangement = Arrangement.Center,
     ) {
         Surface(
-            modifier = Modifier.size(72.dp),
+            modifier = Modifier.size(88.dp),
             shape = CircleShape,
-            color = MaterialTheme.colorScheme.surfaceVariant,
+            color = MaterialTheme.colorScheme.primaryContainer,
+            tonalElevation = 2.dp,
+            shadowElevation = 6.dp,
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Text(
                     text = "₫",
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.displaySmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
                 )
             }
         }
@@ -824,8 +901,8 @@ private fun EmptyState(query: String, filter: DebtFilter, onAdd: () -> Unit) {
         )
         if (query.isBlank() && filter == DebtFilter.ALL) {
             Spacer(Modifier.height(20.dp))
-            TextButton(onClick = onAdd) {
-                Text("Thêm khoản nợ")
+            Button(onClick = onAdd) {
+                Text("Thêm khoản nợ", fontWeight = FontWeight.SemiBold)
             }
         }
     }
