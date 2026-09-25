@@ -1,6 +1,8 @@
 package com.nomono.sono.data
 
 import com.nomono.sono.util.applyTransaction
+import com.nomono.sono.util.reverseStoredTransaction
+import com.nomono.sono.util.transactionDelta
 import kotlinx.coroutines.flow.Flow
 
 class DebtRepository(private val dao: DebtDao) {
@@ -47,11 +49,27 @@ class DebtRepository(private val dao: DebtDao) {
                 amount = amount,
                 kind = kind,
                 createdAt = now,
+                signedDelta = transactionDelta(debt.debtType, kind, amount),
             ),
             debt = debt.copy(
                 amount = balance.amount,
                 debtType = balance.debtType,
                 updatedAt = now,
+            ),
+        )
+    }
+
+    suspend fun deleteTransaction(transactionId: Long) {
+        val transaction = dao.getTransactionById(transactionId) ?: return
+        val debt = dao.getById(transaction.debtId) ?: return
+        // Dòng legacy (DB cũ, không có signedDelta): đảo ngược naive (best-effort).
+        val balance = reverseStoredTransaction(debt.amount, debt.debtType, transaction)
+        dao.deleteTransactionAndRecalc(
+            transaction,
+            debt.copy(
+                amount = balance.amount,
+                debtType = balance.debtType,
+                updatedAt = System.currentTimeMillis(),
             ),
         )
     }

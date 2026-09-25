@@ -44,6 +44,41 @@ class DebtRepositoryTest {
         assertEquals(DebtType.I_OWE_THEM, dao.debt?.debtType)
     }
 
+    @Test
+    fun delete_transaction_recalculates_debt_balance() = runTest {
+        val debt = debt(amount = 100_000)
+        val dao = FakeDebtDao(debt)
+        val repo = DebtRepository(dao)
+
+        repo.recordTransaction(debt.id, 40_000, TransactionKind.PAYMENT)
+        assertEquals(60_000L, dao.debt?.amount)
+
+        val txId = dao.lastRecordedTx?.id ?: error("no tx recorded")
+        repo.deleteTransaction(txId)
+
+        assertEquals(100_000L, dao.debt?.amount)
+        assertEquals(DebtType.THEY_OWE_ME, dao.debt?.debtType)
+        assertEquals(null, dao.lastRecordedTx)
+    }
+
+    @Test
+    fun delete_transaction_reverses_direction_after_overpayment() = runTest {
+        val debt = debt(amount = 50_000)
+        val dao = FakeDebtDao(debt)
+        val repo = DebtRepository(dao)
+
+        // Trả 80_000 khi nợ 50_000 → đảo sang tôi nợ họ 30_000
+        repo.recordTransaction(debt.id, 80_000, TransactionKind.PAYMENT)
+        assertEquals(30_000L, dao.debt?.amount)
+        assertEquals(DebtType.I_OWE_THEM, dao.debt?.debtType)
+
+        val txId = dao.lastRecordedTx?.id ?: error("no tx recorded")
+        repo.deleteTransaction(txId)
+
+        assertEquals(50_000L, dao.debt?.amount)
+        assertEquals(DebtType.THEY_OWE_ME, dao.debt?.debtType)
+    }
+
     private fun debt(amount: Long = 100_000) = Debt(
         id = 1,
         name = "An",
@@ -58,6 +93,8 @@ class DebtRepositoryTest {
         var debt: Debt? = initialDebt
         var hasTransactions = true
         var deletedDebts = 0
+        var lastRecordedTx: DebtTransaction? = null
+            private set
 
         override fun observeAll(): Flow<List<Debt>> = emptyFlow()
 
@@ -76,14 +113,28 @@ class DebtRepositoryTest {
 
         override fun observeTransactions(debtId: Long): Flow<List<DebtTransaction>> = emptyFlow()
 
+        override suspend fun getTransactionById(id: Long): DebtTransaction? =
+            lastRecordedTx?.takeIf { it.id == id }
+
+        override suspend fun deleteTransaction(transaction: DebtTransaction) {
+            if (lastRecordedTx?.id == transaction.id) lastRecordedTx = null
+        }
+
         override suspend fun insertTransaction(transaction: DebtTransaction): Long = transaction.id
 
         override suspend fun recordTransaction(transaction: DebtTransaction, debt: Debt) {
+            lastRecordedTx = transaction.copy(id = 1)
             update(debt)
         }
 
         override suspend fun deleteTransactions(debtId: Long) {
             hasTransactions = false
+            lastRecordedTx = null
+        }
+
+        override suspend fun deleteTransactionAndRecalc(transaction: DebtTransaction, debt: Debt) {
+            deleteTransaction(transaction)
+            update(debt)
         }
     }
 }

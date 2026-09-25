@@ -24,6 +24,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
@@ -70,6 +71,7 @@ import com.nomono.sono.util.Validation
 import com.nomono.sono.util.VndFormat
 import com.nomono.sono.util.VndGroupingTransformation
 import com.nomono.sono.util.applyTransaction
+import com.nomono.sono.util.reverseStoredTransaction
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -94,6 +96,7 @@ fun DebtEditorSheet(
     onClearRequest: (Debt) -> Unit,
     onDeleteRequest: (Debt) -> Unit,
     onRecordTransaction: (debtId: Long, amount: Long, kind: TransactionKind) -> Unit,
+    onDeleteTransaction: (transactionId: Long) -> Unit,
 ) {
     var name by rememberSaveable { mutableStateOf(debt?.name ?: "") }
     var amountText by rememberSaveable { mutableStateOf(debt?.amount?.toString() ?: "") }
@@ -254,6 +257,17 @@ fun DebtEditorSheet(
                     debt = debt,
                     transactions = transactions,
                     onRecord = { showTransactionDialog = true },
+                    onDeleteTransaction = { tx ->
+                        onDeleteTransaction(tx.id)
+                        // Đồng bộ số hiển thị trong sheet với DB sau khi xóa.
+                        val balance = reverseStoredTransaction(
+                            VndFormat.parseDigits(amountText),
+                            debtType,
+                            tx,
+                        )
+                        amountText = balance.amount.toString()
+                        debtTypeName = balance.debtType.name
+                    },
                 )
 
                 Spacer(Modifier.height(8.dp))
@@ -402,7 +416,9 @@ private fun TransactionSection(
     debt: Debt,
     transactions: List<DebtTransaction>,
     onRecord: () -> Unit,
+    onDeleteTransaction: (DebtTransaction) -> Unit,
 ) {
+    var pendingDelete by remember { mutableStateOf<DebtTransaction?>(null) }
     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
     Spacer(Modifier.height(8.dp))
 
@@ -431,14 +447,48 @@ private fun TransactionSection(
                 .verticalScroll(rememberScrollState()),
         ) {
             transactions.forEach { tx ->
-                TransactionRow(transaction = tx, debtType = debt.debtType)
+                TransactionRow(
+                    transaction = tx,
+                    debtType = debt.debtType,
+                    onDelete = { pendingDelete = tx },
+                )
             }
         }
+    }
+
+    val txToDelete = pendingDelete
+    if (txToDelete != null) {
+        val labels = kindLabels(debt.debtType)
+        val kindText = if (txToDelete.kind == TransactionKind.PAYMENT) labels.payment else labels.add
+        AlertDialog(
+            onDismissRequest = { pendingDelete = null },
+            title = { Text("Xóa giao dịch?") },
+            text = { Text("$kindText ${VndFormat.format(txToDelete.amount)} sẽ bị xóa và số nợ cập nhật lại.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        pendingDelete = null
+                        onDeleteTransaction(txToDelete)
+                    },
+                ) {
+                    Text("Xóa", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingDelete = null }) {
+                    Text("Hủy")
+                }
+            },
+        )
     }
 }
 
 @Composable
-private fun TransactionRow(transaction: DebtTransaction, debtType: DebtType) {
+private fun TransactionRow(
+    transaction: DebtTransaction,
+    debtType: DebtType,
+    onDelete: () -> Unit,
+) {
     val sono = LocalSonoColors.current
     val isPayment = transaction.kind == TransactionKind.PAYMENT
     val labels = kindLabels(debtType)
@@ -469,6 +519,13 @@ private fun TransactionRow(transaction: DebtTransaction, debtType: DebtType) {
             fontWeight = FontWeight.SemiBold,
             color = color,
         )
+        IconButton(onClick = onDelete) {
+            Icon(
+                Icons.Filled.Delete,
+                contentDescription = "Xóa giao dịch $label ${VndFormat.format(transaction.amount)}",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 

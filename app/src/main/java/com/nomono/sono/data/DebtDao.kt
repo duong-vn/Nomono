@@ -29,6 +29,12 @@ interface DebtDao {
     @Query("SELECT * FROM debt_transactions WHERE debtId = :debtId ORDER BY createdAt DESC, id DESC")
     fun observeTransactions(debtId: Long): Flow<List<DebtTransaction>>
 
+    @Query("SELECT * FROM debt_transactions WHERE id = :id")
+    suspend fun getTransactionById(id: Long): DebtTransaction?
+
+    @Delete
+    suspend fun deleteTransaction(transaction: DebtTransaction)
+
     @Insert
     suspend fun insertTransaction(transaction: DebtTransaction): Long
 
@@ -51,5 +57,11 @@ interface DebtDao {
     suspend fun deleteDebt(debt: Debt) {
         deleteTransactions(debt.id)
         delete(debt)
+    }
+
+    @Transaction
+    suspend fun deleteTransactionAndRecalc(transaction: DebtTransaction, debt: Debt) {
+        deleteTransaction(transaction)
+        update(debt)
     }
 }

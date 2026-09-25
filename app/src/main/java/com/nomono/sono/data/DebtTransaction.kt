@@ -25,4 +25,6 @@ data class DebtTransaction(
     val amount: Long,
     val kind: TransactionKind,
     val createdAt: Long,
+    /** Delta đã áp vào số dư có dấu lúc ghi nhận; 0 = dòng legacy (best-effort khi xóa). */
+    val signedDelta: Long = 0,
 )

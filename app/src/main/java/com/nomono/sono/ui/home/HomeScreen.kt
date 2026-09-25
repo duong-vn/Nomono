@@ -198,7 +198,7 @@ fun HomeScreen(
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
             if (state.debts.isEmpty()) {
-                EmptyState(query = state.searchQuery, onAdd = ::openAdd)
+                EmptyState(query = state.searchQuery, filter = state.debtFilter, onAdd = ::openAdd)
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
@@ -243,6 +243,7 @@ fun HomeScreen(
             onRecordTransaction = { debtId, amount, kind ->
                 viewModel.recordTransaction(debtId, amount, kind)
             },
+            onDeleteTransaction = viewModel::deleteTransaction,
         )
     }
 }
@@ -779,7 +780,7 @@ private fun DebtRow(debt: Debt, onClick: () -> Unit) {
 }
 
 @Composable
-private fun EmptyState(query: String, onAdd: () -> Unit) {
+private fun EmptyState(query: String, filter: DebtFilter, onAdd: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -802,18 +803,26 @@ private fun EmptyState(query: String, onAdd: () -> Unit) {
             }
         }
         Spacer(Modifier.height(20.dp))
+        val (title, subtitle) = if (query.isNotBlank()) {
+            "Không tìm thấy kết quả" to "Thử từ khóa khác."
+        } else when (filter) {
+            DebtFilter.THEY_OWE_ME -> "Không có khoản họ nợ bạn" to "Đổi bộ lọc để xem các khoản khác."
+            DebtFilter.I_OWE_THEM -> "Không có khoản bạn nợ" to "Đổi bộ lọc để xem các khoản khác."
+            DebtFilter.SETTLED -> "Chưa có khoản tất toán" to "Đổi bộ lọc để xem các khoản khác."
+            DebtFilter.ALL -> "Chưa có khoản nợ nào" to "Thêm người đầu tiên để bắt đầu."
+        }
         Text(
-            text = if (query.isBlank()) "Chưa có khoản nợ nào" else "Không tìm thấy kết quả",
+            text = title,
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onBackground,
         )
         Spacer(Modifier.height(6.dp))
         Text(
-            text = if (query.isBlank()) "Thêm người đầu tiên để bắt đầu." else "Thử từ khóa khác.",
+            text = subtitle,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        if (query.isBlank()) {
+        if (query.isBlank() && filter == DebtFilter.ALL) {
             Spacer(Modifier.height(20.dp))
             TextButton(onClick = onAdd) {
                 Text("Thêm khoản nợ")

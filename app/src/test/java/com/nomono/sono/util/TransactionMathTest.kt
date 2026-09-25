@@ -1,5 +1,6 @@
 package com.nomono.sono.util
 
+import com.nomono.sono.data.DebtTransaction
 import com.nomono.sono.data.DebtType
 import com.nomono.sono.data.TransactionKind
 import org.junit.Assert.assertEquals
@@ -44,6 +45,41 @@ class TransactionMathTest {
         assertEquals(
             DebtBalance(0L, DebtType.I_OWE_THEM),
             applyTransaction(18L, DebtType.I_OWE_THEM, TransactionKind.PAYMENT, 18L),
+        )
+    }
+
+    @Test
+    fun reverse_payment_restores_amount() {
+        val delta = transactionDelta(DebtType.THEY_OWE_ME, TransactionKind.PAYMENT, 20L)
+        assertEquals(
+            DebtBalance(50L, DebtType.THEY_OWE_ME),
+            reverseTransaction(30L, DebtType.THEY_OWE_ME, delta),
+        )
+    }
+
+    @Test
+    fun reverse_after_overpayment_flip_restores_signed_balance() {
+        // Họ nợ 50, trả 80 → tôi nợ họ 30; xóa giao dịch trả phải về họ nợ 50.
+        val delta = transactionDelta(DebtType.THEY_OWE_ME, TransactionKind.PAYMENT, 80L)
+        assertEquals(
+            DebtBalance(50L, DebtType.THEY_OWE_ME),
+            reverseTransaction(30L, DebtType.I_OWE_THEM, delta),
+        )
+    }
+
+    @Test
+    fun reverse_legacy_transaction_falls_back_to_inverse_kind() {
+        val legacy = DebtTransaction(
+            id = 1,
+            debtId = 1,
+            amount = 20L,
+            kind = TransactionKind.PAYMENT,
+            createdAt = 0,
+            signedDelta = 0,
+        )
+        assertEquals(
+            DebtBalance(50L, DebtType.THEY_OWE_ME),
+            reverseStoredTransaction(30L, DebtType.THEY_OWE_ME, legacy),
         )
     }
 }

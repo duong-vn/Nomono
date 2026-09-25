@@ -46,7 +46,7 @@ fun List<Debt>.filterFor(filter: DebtFilter): List<Debt> = filter {
 data class HomeUiState(
     val debts: List<Debt> = emptyList(),
     val sortMode: SortMode = SortMode.RECENT,
-    val debtFilter: DebtFilter = DebtFilter.ALL,
+    val debtFilter: DebtFilter = DebtFilter.THEY_OWE_ME,
     val searchQuery: String = "",
     val totals: DebtTotals = DebtTotals(0L, 0L),
 )
@@ -55,7 +55,7 @@ data class HomeUiState(
 class HomeViewModel(private val repository: DebtRepository) : ViewModel() {
 
     private val sortMode = MutableStateFlow(SortMode.RECENT)
-    private val debtFilter = MutableStateFlow(DebtFilter.ALL)
+    private val debtFilter = MutableStateFlow(DebtFilter.THEY_OWE_ME)
     private val searchQuery = MutableStateFlow("")
 
     val uiState: StateFlow<HomeUiState> =
@@ -119,6 +119,10 @@ class HomeViewModel(private val repository: DebtRepository) : ViewModel() {
 
     fun recordTransaction(debtId: Long, amount: Long, kind: TransactionKind) {
         viewModelScope.launch { repository.recordTransaction(debtId, amount, kind) }
+    }
+
+    fun deleteTransaction(transactionId: Long) {
+        viewModelScope.launch { repository.deleteTransaction(transactionId) }
     }
 
     companion object {
