@@ -4,6 +4,7 @@ import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -32,6 +33,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -41,6 +43,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -133,15 +136,17 @@ fun DebtEditorSheet(
         Column(
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp)
                 .navigationBarsPadding()
                 .imePadding()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp)
                 .padding(bottom = 24.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = if (debt != null) "Chi tiết nợ" else "Thêm khoản nợ",
                     style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f),
                 )
                 if (debt != null) {
@@ -180,10 +185,18 @@ fun DebtEditorSheet(
                     focusRequester = nameFocus,
                 )
             } else {
+                val isZero = VndFormat.parseDigits(amountText) == 0L
+                val directionText = if (isZero) {
+                    "Không nợ"
+                } else if (debtType == DebtType.THEY_OWE_ME) {
+                    "Họ nợ bạn"
+                } else {
+                    "Bạn nợ"
+                }
                 IdentityHeader(
                     name = name,
                     avatarUri = avatarUri,
-                    direction = if (debtType == DebtType.THEY_OWE_ME) "Họ nợ bạn" else "Bạn nợ",
+                    direction = directionText,
                     onEdit = { editIdentity = true },
                 )
             }
@@ -200,7 +213,7 @@ fun DebtEditorSheet(
                     .focusRequester(amountFocus),
                 label = { Text("Số tiền") },
                 placeholder = { Text("0") },
-                suffix = { Text("₫") },
+                suffix = { Text("₫", fontWeight = FontWeight.Bold) },
                 singleLine = true,
                 isError = amountError,
                 supportingText = if (amountError) {
@@ -214,6 +227,7 @@ fun DebtEditorSheet(
                     imeAction = ImeAction.Done,
                 ),
                 keyboardActions = KeyboardActions(onDone = { amountFocus.freeFocus() }),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
             )
             Spacer(Modifier.height(16.dp))
 
@@ -233,7 +247,7 @@ fun DebtEditorSheet(
                     Text("Tôi nợ họ")
                 }
             }
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(20.dp))
 
             Button(
                 onClick = {
@@ -246,9 +260,10 @@ fun DebtEditorSheet(
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(52.dp),
+                    .height(54.dp),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
             ) {
-                Text("Lưu", style = MaterialTheme.typography.bodyLarge)
+                Text("Lưu", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             }
 
             if (debt != null) {
@@ -383,7 +398,11 @@ private fun IdentityHeader(
     onEdit: () -> Unit,
 ) {
     val sono = LocalSonoColors.current
-    val color = if (direction == "Họ nợ bạn") sono.oweMe else sono.iOwe
+    val color = when (direction) {
+        "Không nợ" -> MaterialTheme.colorScheme.onSurfaceVariant
+        "Họ nợ bạn" -> sono.oweMe
+        else -> sono.iOwe
+    }
 
     Row(verticalAlignment = Alignment.CenterVertically) {
         Avatar(name = name, uri = avatarUri, size = 56.dp)
@@ -426,10 +445,15 @@ private fun TransactionSection(
         Text(
             text = "Lịch sử giao dịch",
             style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
             modifier = Modifier.weight(1f),
         )
-        TextButton(onClick = onRecord) {
-            Text("+ Ghi nhận")
+        FilledTonalButton(
+            onClick = onRecord,
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp),
+        ) {
+            Text("+ Ghi nhận", fontWeight = FontWeight.SemiBold)
         }
     }
 
@@ -496,35 +520,45 @@ private fun TransactionRow(
     val sign = if (isPayment) "−" else "+"
     val color = if (isPayment) sono.oweMe else sono.iOwe
 
-    Row(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
+            .padding(vertical = 3.dp),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        border = BorderStroke(1.dp, color.copy(alpha = 0.25f)),
     ) {
-        Column(Modifier.weight(1f)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text = formatTxTime(transaction.createdAt),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             Text(
-                text = label,
-                style = MaterialTheme.typography.bodyMedium,
+                text = "$sign${VndFormat.format(transaction.amount)}",
+                style = MaterialTheme.typography.titleMedium.copy(fontFeatureSettings = "tnum"),
+                fontWeight = FontWeight.Bold,
+                color = color,
             )
-            Text(
-                text = formatTxTime(transaction.createdAt),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        Text(
-            text = "$sign${VndFormat.format(transaction.amount)}",
-            style = MaterialTheme.typography.bodyLarge.copy(fontFeatureSettings = "tnum"),
-            fontWeight = FontWeight.SemiBold,
-            color = color,
-        )
-        IconButton(onClick = onDelete) {
-            Icon(
-                Icons.Filled.Delete,
-                contentDescription = "Xóa giao dịch $label ${VndFormat.format(transaction.amount)}",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            IconButton(onClick = onDelete) {
+                Icon(
+                    Icons.Filled.Delete,
+                    contentDescription = "Xóa giao dịch $label ${VndFormat.format(transaction.amount)}",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }
@@ -546,9 +580,15 @@ private fun TransactionDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Ghi nhận giao dịch") },
+        title = {
+            Text(
+                "Ghi nhận giao dịch",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+            )
+        },
         text = {
-            Column {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
                 SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
                     SegmentedButton(
                         selected = kind == TransactionKind.PAYMENT,
@@ -565,7 +605,7 @@ private fun TransactionDialog(
                         Text(labels.add)
                     }
                 }
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(14.dp))
                 OutlinedTextField(
                     value = amountText,
                     onValueChange = { raw ->
@@ -574,7 +614,8 @@ private fun TransactionDialog(
                     },
                     modifier = Modifier.fillMaxWidth(),
                     label = { Text("Số tiền") },
-                    suffix = { Text("₫") },
+                    placeholder = { Text("0") },
+                    suffix = { Text("₫", fontWeight = FontWeight.Bold) },
                     singleLine = true,
                     isError = amountError,
                     supportingText = if (amountError) {
@@ -584,6 +625,7 @@ private fun TransactionDialog(
                     },
                     visualTransformation = VndGroupingTransformation,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
                 )
             }
         },
@@ -597,7 +639,7 @@ private fun TransactionDialog(
                     }
                 },
             ) {
-                Text("Lưu")
+                Text("Lưu", fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
@@ -613,7 +655,7 @@ private val txTimeFormatter = ThreadLocal.withInitial {
 }
 
 private fun formatTxTime(timestamp: Long): String =
-    txTimeFormatter.get().format(Date(timestamp))
+    txTimeFormatter.get()?.format(Date(timestamp)) ?: ""
 
 @Composable
 private fun AvatarField(uri: String?, name: String, onChange: (String?) -> Unit) {

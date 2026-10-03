@@ -9,6 +9,7 @@ import com.nomono.sono.data.DebtRepository
 import com.nomono.sono.data.DebtType
 import com.nomono.sono.data.TransactionKind
 import com.nomono.sono.util.DebtTotals
+import com.nomono.sono.util.QuickAdjust
 import com.nomono.sono.util.computeTotals
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -119,6 +120,11 @@ class HomeViewModel(private val repository: DebtRepository) : ViewModel() {
 
     fun recordTransaction(debtId: Long, amount: Long, kind: TransactionKind) {
         viewModelScope.launch { repository.recordTransaction(debtId, amount, kind) }
+    }
+
+    fun adjustDebt(debt: Debt, delta: Long) {
+        val (amount, kind) = QuickAdjust.calculateAdjustment(debt.debtType, delta) ?: return
+        recordTransaction(debt.id, amount, kind)
     }
 
     fun deleteTransaction(transactionId: Long) {

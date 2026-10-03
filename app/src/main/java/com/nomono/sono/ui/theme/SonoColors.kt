@@ -1,6 +1,7 @@
 package com.nomono.sono.ui.theme
 
 import androidx.compose.runtime.Immutable
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
 @Immutable
@@ -11,23 +12,53 @@ data class SonoColors(
     val iOwe: Color,
     val iOweContainer: Color,
     val onIOweContainer: Color,
+    val backgroundGradient: Brush,
+    val glassColor: Color,
+    val glassBorder: Color,
+    val glassGoldBorder: Color,
+)
+
+val TerminalSonoColors = SonoColors(
+    oweMe = TerminalOrange,
+    oweMeContainer = Color(0xFF221105),
+    onOweMeContainer = TerminalInk,
+    iOwe = TerminalNeg,
+    iOweContainer = Color(0xFF290A07),
+    onIOweContainer = Color(0xFFFF9E94),
+    backgroundGradient = Brush.verticalGradient(
+        colors = listOf(TerminalPage, TerminalScreen),
+    ),
+    glassColor = TerminalScreen,
+    glassBorder = TerminalOrange,
+    glassGoldBorder = TerminalOrangeDim,
 )
 
 val LightSonoColors = SonoColors(
-    oweMe = Color(0xFF1B873F),
-    oweMeContainer = Color(0xFFE6F4EA),
-    onOweMeContainer = Color(0xFF0F5224),
-    iOwe = Color(0xFFC62828),
-    iOweContainer = Color(0xFFFDE8E8),
-    onIOweContainer = Color(0xFF8E1B1B),
+    oweMe = LokiGreenDark,
+    oweMeContainer = LokiGreenContainerLight,
+    onOweMeContainer = Color(0xFF003816),
+    iOwe = Color(0xFFD32F2F),
+    iOweContainer = Color(0xFFFFEBEE),
+    onIOweContainer = Color(0xFFC62828),
+    backgroundGradient = Brush.verticalGradient(
+        colors = listOf(LightGradientStart, LightGradientMid, LightGradientEnd),
+    ),
+    glassColor = LightGlassColor,
+    glassBorder = LightGlassBorder,
+    glassGoldBorder = Color(0x40C68A00),
 )
 
 val DarkSonoColors = SonoColors(
-    oweMe = Color(0xFF81C784),
-    oweMeContainer = Color(0xFF13321B),
-    onOweMeContainer = Color(0xFFA5D6A7),
-    iOwe = Color(0xFFEF5350),
-    iOweContainer = Color(0xFF3C1414),
-    onIOweContainer = Color(0xFFFFB4AB),
+    oweMe = LokiGreen,
+    oweMeContainer = LokiGreenContainer,
+    onOweMeContainer = LokiGreenLight,
+    iOwe = LokiRed,
+    iOweContainer = LokiRedContainer,
+    onIOweContainer = LokiRedLight,
+    backgroundGradient = Brush.verticalGradient(
+        colors = listOf(DarkGradientStart, DarkGradientMid, DarkGradientEnd),
+    ),
+    glassColor = DarkGlassColor,
+    glassBorder = DarkGlassBorder,
+    glassGoldBorder = DarkGlassGoldBorder,
 )
-

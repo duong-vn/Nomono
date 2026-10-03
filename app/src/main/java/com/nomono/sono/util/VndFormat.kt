@@ -21,7 +21,7 @@ object VndFormat {
         }
     }
 
-    fun format(amount: Long): String = formatterHolder.get().format(amount) + " ₫"
+    fun format(amount: Long): String = (formatterHolder.get()?.format(amount) ?: amount.toString()) + " ₫"
 
     // Single pass, no intermediate filtered String (called on every keystroke).
     fun parseDigits(input: String): Long {

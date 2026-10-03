@@ -19,7 +19,7 @@ class MainActivity : ComponentActivity() {
         val app = application as SonoApp
 
         setContent {
-            val themeMode by app.themePreferences.themeMode.collectAsState(initial = ThemeMode.SYSTEM)
+            val themeMode by app.themePreferences.themeMode.collectAsState(initial = ThemeMode.TERMINAL)
             SonoTheme(themeMode = themeMode) {
                 HomeScreen(
                     repository = app.repository,

@@ -1,6 +1,8 @@
 package com.nomono.sono.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
@@ -8,25 +10,53 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import com.nomono.sono.data.ThemeMode
 
+private val TerminalColorScheme = darkColorScheme(
+    primary = TerminalOrange,
+    onPrimary = TerminalScreen,
+    primaryContainer = Color(0xFF2B1405),
+    onPrimaryContainer = TerminalInk,
+    secondary = TerminalOrange,
+    onSecondary = TerminalScreen,
+    secondaryContainer = Color(0xFF2B1405),
+    onSecondaryContainer = TerminalInk,
+    background = TerminalPage,
+    onBackground = TerminalOrange,
+    surface = TerminalScreen,
+    onSurface = TerminalOrange,
+    surfaceVariant = Color(0xFF14171E),
+    onSurfaceVariant = TerminalOrangeDim,
+    surfaceContainerLowest = Color(0xFF020304),
+    surfaceContainerLow = Color(0xFF07080B),
+    surfaceContainer = Color(0xFF0B0D12),
+    surfaceContainerHigh = Color(0xFF10131A),
+    surfaceContainerHighest = Color(0xFF181D26),
+    outline = TerminalOrangeDim,
+    outlineVariant = Color(0xFF4A250D),
+    error = TerminalNeg,
+    onError = Color(0xFF330805),
+)
+
 private val LightColorScheme = lightColorScheme(
-    primary = Teal40,
+    primary = LokiGreenDark,
     onPrimary = Color.White,
-    primaryContainer = Teal90,
-    onPrimaryContainer = Color(0xFF00201C),
-    secondary = TealGrey40,
+    primaryContainer = LokiGreenContainerLight,
+    onPrimaryContainer = LokiGreenDark,
+    secondary = LokiGoldDark,
     onSecondary = Color.White,
-    secondaryContainer = Color(0xFFCCE8E2),
-    onSecondaryContainer = Color(0xFF05201C),
+    secondaryContainer = LokiGoldContainerLight,
+    onSecondaryContainer = Color(0xFF261900),
     background = LightBackground,
     onBackground = LightOnBackground,
     surface = LightSurface,
     onSurface = LightOnSurface,
     surfaceVariant = LightSurfaceVariant,
     onSurfaceVariant = LightOnSurfaceVariant,
-    surfaceContainer = LightSurfaceContainer,
+    surfaceContainerLowest = LightSurfaceContainerLowest,
     surfaceContainerLow = LightSurfaceContainerLow,
+    surfaceContainer = LightSurfaceContainer,
     surfaceContainerHigh = LightSurfaceContainerHigh,
     surfaceContainerHighest = LightSurfaceContainerHighest,
     outline = LightOutline,
@@ -35,53 +65,36 @@ private val LightColorScheme = lightColorScheme(
     onError = Color.White,
 )
 
-private val DarkColorScheme = darkColorScheme(
-    primary = Teal80,
-    onPrimary = Teal10,
-    primaryContainer = Teal20,
-    onPrimaryContainer = Teal90,
-    secondary = TealGrey80,
-    onSecondary = Color(0xFF1C3531),
-    secondaryContainer = Color(0xFF334B46),
-    onSecondaryContainer = Color(0xFFCCE8E2),
-    background = DarkBackground,
-    onBackground = DarkOnBackground,
-    surface = DarkSurface,
-    onSurface = DarkOnSurface,
-    surfaceVariant = DarkSurfaceVariant,
-    onSurfaceVariant = DarkOnSurfaceVariant,
-    surfaceContainer = DarkSurfaceContainer,
-    surfaceContainerLow = DarkSurfaceContainerLow,
-    surfaceContainerHigh = DarkSurfaceContainerHigh,
-    surfaceContainerHighest = DarkSurfaceContainerHighest,
-    outline = DarkOutline,
-    outlineVariant = DarkOutlineVariant,
-    error = Color(0xFFFFB4AB),
-    onError = Color(0xFF690005),
-)
-
-val LocalSonoColors = staticCompositionLocalOf { LightSonoColors }
+val LocalSonoColors = staticCompositionLocalOf { TerminalSonoColors }
 
 @Composable
 fun SonoTheme(
     themeMode: ThemeMode,
     content: @Composable () -> Unit,
 ) {
-    val darkTheme = when (themeMode) {
-        ThemeMode.SYSTEM -> isSystemInDarkTheme()
+    val isDark = when (themeMode) {
+        ThemeMode.TERMINAL -> true
         ThemeMode.LIGHT -> false
-        ThemeMode.DARK -> true
+        ThemeMode.SYSTEM -> isSystemInDarkTheme()
     }
 
-    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
-    val sonoColors = if (darkTheme) DarkSonoColors else LightSonoColors
+    val (colorScheme, sonoColors) = if (isDark) {
+        TerminalColorScheme to TerminalSonoColors
+    } else {
+        LightColorScheme to LightSonoColors
+    }
 
     CompositionLocalProvider(LocalSonoColors provides sonoColors) {
         MaterialTheme(
             colorScheme = colorScheme,
             typography = Typography,
             shapes = Shapes,
-            content = content,
-        )
+        ) {
+            CompositionLocalProvider(
+                LocalContentColor provides colorScheme.onBackground,
+                LocalTextStyle provides TextStyle(fontFamily = VT323FontFamily),
+                content = content,
+            )
+        }
     }
 }
