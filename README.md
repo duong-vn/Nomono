@@ -6,7 +6,7 @@ Hoạt động hoàn toàn offline, dữ liệu lưu cục bộ. Không tài kho
 
 ## Tính năng
 
-- Thêm / sửa / xóa khoản nợ theo từng người
+- Thêm / sửa / xóa khoản nợ theo từng người và thêm sửa sub-khoản nợ
 - Hai hướng nợ: **Họ nợ tôi** / **Tôi nợ họ** (phân biệt bằng màu + ký hiệu + nhãn)
 - Tổng hợp nhanh: tổng "Họ nợ bạn", tổng "Bạn nợ", và "Chênh lệch"
 - Định dạng tiền VND (`1.500.000 ₫`), không dùng số thập phân, lưu bằng `Long`
