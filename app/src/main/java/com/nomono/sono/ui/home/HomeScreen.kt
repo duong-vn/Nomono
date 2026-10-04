@@ -565,9 +565,9 @@ private fun TerminalHomeScreen(
             val netIsNeg = net < 0
             val netColor = if (netIsNeg) TerminalNeg else TerminalOrange
             val netText = when {
-                net > 0 -> "+${VndFormat.format(net)} đ"
-                net < 0 -> "−${VndFormat.format(-net)} đ"
-                else -> "0 đ"
+                net > 0 -> "+${VndFormat.format(net)}"
+                net < 0 -> "−${VndFormat.format(-net)}"
+                else -> "0 ₫"
             }
             val netHint = when {
                 net > 0 -> "BẠN ĐANG CHO VAY RÒNG"
@@ -634,7 +634,7 @@ private fun TerminalHomeScreen(
                         color = TerminalOrangeDim,
                     )
                     Text(
-                        text = "+${VndFormat.format(state.totals.oweMe)} đ",
+                        text = "+${VndFormat.format(state.totals.oweMe)}",
                         fontFamily = VT323FontFamily,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
@@ -654,7 +654,7 @@ private fun TerminalHomeScreen(
                         color = TerminalOrangeDim,
                     )
                     Text(
-                        text = "−${VndFormat.format(state.totals.iOwe)} đ",
+                        text = "−${VndFormat.format(state.totals.iOwe)}",
                         fontFamily = VT323FontFamily,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
@@ -1046,14 +1046,14 @@ private fun TerminalDebtRow(
         else -> "▼ "
     }
     val amtText = when {
-        isSettled -> "0 đ"
-        isOweMe -> "+${VndFormat.format(debt.amount)} đ"
-        else -> "−${VndFormat.format(debt.amount)} đ"
+        isSettled -> "0 ₫"
+        isOweMe -> "+${VndFormat.format(debt.amount)}"
+        else -> "−${VndFormat.format(debt.amount)}"
     }
     val stateLabel = when {
         isSettled -> "KHÔNG NỢ NẦN GÌ"
-        isOweMe -> "NỢ BẠN ${VndFormat.format(debt.amount)} Đ"
-        else -> "BẠN NỢ ${VndFormat.format(debt.amount)} Đ"
+        isOweMe -> "NỢ BẠN ${VndFormat.format(debt.amount)}"
+        else -> "BẠN NỢ ${VndFormat.format(debt.amount)}"
     }
 
     Column(
