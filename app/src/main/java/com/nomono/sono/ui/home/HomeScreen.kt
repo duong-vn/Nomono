@@ -394,7 +394,8 @@ private fun TerminalHomeScreen(
     val stepLabel = "${formatK(currentStep.first)}/${formatK(currentStep.second)}"
 
     val infiniteTransition = rememberInfiniteTransition(label = "terminalCursor")
-    val cursorVisible by infiniteTransition.animateFloat(
+    // Keep as State (no `by`): read only in the draw phase to skip recomposition.
+    val cursorVisible = infiniteTransition.animateFloat(
         initialValue = 1f,
         targetValue = 0f,
         animationSpec = infiniteRepeatable(
@@ -837,7 +838,7 @@ private fun TerminalHomeScreen(
                         modifier = Modifier
                             .padding(start = 4.dp)
                             .size(width = 7.dp, height = 12.dp)
-                            .background(if (cursorVisible > 0.5f) TerminalOrange else Color.Transparent),
+                            .drawBehind { if (cursorVisible.value > 0.5f) drawRect(TerminalOrange) },
                     )
                 }
             }
