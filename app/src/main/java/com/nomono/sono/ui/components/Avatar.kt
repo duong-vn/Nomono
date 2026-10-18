@@ -68,6 +68,7 @@ fun Avatar(
     name: String,
     uri: String?,
     size: Dp,
+    shape: androidx.compose.ui.graphics.Shape = CircleShape,
 ) {
     val context = LocalContext.current
     // IO-bound decode must not run on the main thread (produceState uses Main).
@@ -87,7 +88,7 @@ fun Avatar(
     Box(
         modifier = Modifier
             .size(size)
-            .clip(CircleShape)
+            .clip(shape)
             .background(background),
         contentAlignment = Alignment.Center,
     ) {

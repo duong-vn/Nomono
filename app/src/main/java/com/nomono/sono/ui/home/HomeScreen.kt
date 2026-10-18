@@ -43,21 +43,25 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
@@ -105,6 +109,9 @@ import com.nomono.sono.data.ThemePreferences
 import com.nomono.sono.data.TransactionKind
 import com.nomono.sono.ui.components.Avatar
 import com.nomono.sono.ui.components.GlassCard
+import com.nomono.sono.ui.components.TerminalKeyButton
+import com.nomono.sono.ui.components.TerminalSheetHeader
+import com.nomono.sono.ui.components.drawTerminalPhosphorGrid
 import com.nomono.sono.ui.edit.DebtEditorSheet
 import com.nomono.sono.ui.theme.LocalSonoColors
 import com.nomono.sono.ui.theme.TerminalInk
@@ -331,13 +338,17 @@ fun HomeScreen(
     }
 
     if (showCalculator) {
-        CalculatorSheet(onDismiss = { showCalculator = false })
+        CalculatorSheet(
+            isTerminal = isTerminal,
+            onDismiss = { showCalculator = false },
+        )
     }
 
     if (showEditor) {
         DebtEditorSheet(
             debt = editingDebt,
             transactions = editingTransactions,
+            isTerminal = isTerminal,
             onDismiss = { showEditor = false },
             onSave = { name, amount, type, avatarUri ->
                 scope.launch {
@@ -874,35 +885,6 @@ private fun TerminalHomeScreen(
 }
 
 @Composable
-private fun TerminalKeyButton(
-    text: String,
-    active: Boolean,
-    onClick: () -> Unit,
-) {
-    Surface(
-        onClick = onClick,
-        color = if (active) TerminalOrange else Color.Transparent,
-        border = BorderStroke(1.dp, if (active) TerminalOrange else TerminalOrangeDim),
-        shape = RoundedCornerShape(0.dp),
-        modifier = Modifier.height(30.dp),
-    ) {
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier.padding(horizontal = 8.dp),
-        ) {
-            Text(
-                text = text,
-                fontFamily = VT323FontFamily,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 0.8.sp,
-                color = if (active) TerminalScreen else TerminalOrange,
-            )
-        }
-    }
-}
-
-@Composable
 private fun TerminalThemeMenuButton(
     current: ThemeMode,
     onSelect: (ThemeMode) -> Unit,
@@ -1310,8 +1292,12 @@ private val CalculatorRows = listOf(
 )
 private val CalculatorEmphasized = setOf("÷", "×", "−", "+", "=")
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun CalculatorSheet(onDismiss: () -> Unit) {
+private fun CalculatorSheet(
+    isTerminal: Boolean,
+    onDismiss: () -> Unit,
+) {
     var display by remember { mutableStateOf("0") }
     var expression by remember { mutableStateOf("") }
     var accumulator by remember { mutableStateOf<java.math.BigDecimal?>(null) }
@@ -1386,91 +1372,209 @@ private fun CalculatorSheet(onDismiss: () -> Unit) {
         if (operator == null) accumulator = null
     }
 
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background,
-        contentColor = MaterialTheme.colorScheme.onBackground,
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = if (isTerminal) TerminalScreen else MaterialTheme.colorScheme.surface,
+        scrimColor = if (isTerminal) Color.Black.copy(alpha = 0.75f) else BottomSheetDefaults.ScrimColor,
+        shape = if (isTerminal) RoundedCornerShape(0.dp) else RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+        dragHandle = if (isTerminal) null else { { BottomSheetDefaults.DragHandle() } },
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .statusBarsPadding()
-                .navigationBarsPadding()
-                .padding(horizontal = 20.dp, vertical = 8.dp),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = "Máy tính",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.weight(1f),
-                )
-                IconButton(onClick = onDismiss) {
-                    Icon(
-                        Icons.Filled.Close,
-                        contentDescription = "Đóng máy tính",
-                        tint = MaterialTheme.colorScheme.onBackground,
-                    )
-                }
-            }
+        if (isTerminal) {
             Column(
                 modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
-                horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.Bottom,
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 6.dp)
+                    .background(TerminalScreen)
+                    .drawTerminalPhosphorGrid()
+                    .border(2.dp, TerminalOrange)
+                    .padding(3.dp)
+                    .border(1.dp, TerminalOrangeDim)
+                    .padding(horizontal = 12.dp, vertical = 10.dp)
+                    .navigationBarsPadding(),
             ) {
-                Text(
-                    text = expression,
-                    style = MaterialTheme.typography.titleLarge.copy(fontFeatureSettings = "tnum"),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
+                TerminalSheetHeader(
+                    title = "MÁY TÍNH",
+                    onDismiss = onDismiss,
                 )
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = error ?: display,
-                    style = MaterialTheme.typography.displayMedium.copy(fontFeatureSettings = "tnum"),
-                    color = if (error != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onBackground,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            Spacer(Modifier.height(24.dp))
-            CalculatorRows.forEach { row ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+
+                Spacer(Modifier.height(10.dp))
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(TerminalPage)
+                        .border(1.dp, TerminalOrangeDim, RoundedCornerShape(0.dp))
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    horizontalAlignment = Alignment.End,
                 ) {
-                    row.forEach { key ->
-                        if (key.isEmpty()) {
-                            Spacer(Modifier.weight(1f))
-                        } else {
-                            CalculatorKey(
-                                label = key,
-                                emphasized = key in CalculatorEmphasized,
-                                onClick = {
-                                    when (key) {
-                                        "AC" -> reset()
-                                        "⌫" -> if (error == null && !replaceDisplay) {
-                                            display = display.dropLast(1).ifEmpty { "0" }
+                    Text(
+                        text = expression.ifEmpty { "READY" },
+                        fontFamily = VT323FontFamily,
+                        fontSize = 14.sp,
+                        letterSpacing = 1.sp,
+                        color = TerminalOrangeDim,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = error ?: display,
+                        fontFamily = VT323FontFamily,
+                        fontSize = 32.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp,
+                        color = if (error != null) TerminalNeg else TerminalOrange,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+
+                Spacer(Modifier.height(12.dp))
+
+                CalculatorRows.forEach { row ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        row.forEach { key ->
+                            if (key.isEmpty()) {
+                                Spacer(Modifier.weight(1f))
+                            } else {
+                                val emphasized = key in CalculatorEmphasized
+                                val isAction = key in setOf("AC", "⌫", "±")
+                                Surface(
+                                    onClick = {
+                                        when (key) {
+                                            "AC" -> reset()
+                                            "⌫" -> if (error == null && !replaceDisplay) {
+                                                display = display.dropLast(1).ifEmpty { "0" }
+                                            }
+                                            "±" -> toggleSign()
+                                            "." -> inputDecimal()
+                                            "÷" -> apply(CalculatorOperator.DIVIDE)
+                                            "×" -> apply(CalculatorOperator.MULTIPLY)
+                                            "−" -> apply(CalculatorOperator.SUBTRACT)
+                                            "+" -> apply(CalculatorOperator.ADD)
+                                            "=" -> apply(null)
+                                            else -> inputDigit(key)
                                         }
-                                        "±" -> toggleSign()
-                                        "." -> inputDecimal()
-                                        "÷" -> apply(CalculatorOperator.DIVIDE)
-                                        "×" -> apply(CalculatorOperator.MULTIPLY)
-                                        "−" -> apply(CalculatorOperator.SUBTRACT)
-                                        "+" -> apply(CalculatorOperator.ADD)
-                                        "=" -> apply(null)
-                                        else -> inputDigit(key)
+                                    },
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(52.dp),
+                                    color = when {
+                                        emphasized -> TerminalOrange
+                                        isAction -> TerminalPage
+                                        else -> TerminalScreen
+                                    },
+                                    border = BorderStroke(
+                                        1.dp,
+                                        if (emphasized) TerminalOrange else TerminalOrangeDim,
+                                    ),
+                                    shape = RoundedCornerShape(0.dp),
+                                ) {
+                                    Box(
+                                        contentAlignment = Alignment.Center,
+                                        modifier = Modifier.fillMaxSize(),
+                                    ) {
+                                        Text(
+                                            text = key,
+                                            fontFamily = VT323FontFamily,
+                                            fontSize = if (key.length > 1) 18.sp else 22.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (emphasized) TerminalScreen else TerminalOrange,
+                                        )
                                     }
-                                },
-                            )
+                                }
+                            }
                         }
                     }
+                    Spacer(Modifier.height(8.dp))
                 }
-                Spacer(Modifier.height(10.dp))
+            }
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 20.dp, vertical = 8.dp),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "Máy tính",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        modifier = Modifier.weight(1f),
+                    )
+                    IconButton(onClick = onDismiss) {
+                        Icon(
+                            Icons.Filled.Close,
+                            contentDescription = "Đóng máy tính",
+                            tint = MaterialTheme.colorScheme.onBackground,
+                        )
+                    }
+                }
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 12.dp),
+                    horizontalAlignment = Alignment.End,
+                ) {
+                    Text(
+                        text = expression,
+                        style = MaterialTheme.typography.titleLarge.copy(fontFeatureSettings = "tnum"),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = error ?: display,
+                        style = MaterialTheme.typography.displayMedium.copy(fontFeatureSettings = "tnum"),
+                        color = if (error != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onBackground,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                Spacer(Modifier.height(16.dp))
+                CalculatorRows.forEach { row ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        row.forEach { key ->
+                            if (key.isEmpty()) {
+                                Spacer(Modifier.weight(1f))
+                            } else {
+                                CalculatorKey(
+                                    label = key,
+                                    emphasized = key in CalculatorEmphasized,
+                                    onClick = {
+                                        when (key) {
+                                            "AC" -> reset()
+                                            "⌫" -> if (error == null && !replaceDisplay) {
+                                                display = display.dropLast(1).ifEmpty { "0" }
+                                            }
+                                            "±" -> toggleSign()
+                                            "." -> inputDecimal()
+                                            "÷" -> apply(CalculatorOperator.DIVIDE)
+                                            "×" -> apply(CalculatorOperator.MULTIPLY)
+                                            "−" -> apply(CalculatorOperator.SUBTRACT)
+                                            "+" -> apply(CalculatorOperator.ADD)
+                                            "=" -> apply(null)
+                                            else -> inputDigit(key)
+                                        }
+                                    },
+                                )
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(10.dp))
+                }
             }
         }
     }
