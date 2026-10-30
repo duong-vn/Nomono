@@ -23,6 +23,8 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -971,13 +973,12 @@ private fun TransactionSection(
                 color = TerminalOrangeDim,
             )
         } else {
-            Column(
+            LazyColumn(
                 Modifier
                     .fillMaxWidth()
-                    .heightIn(max = 168.dp)
-                    .verticalScroll(rememberScrollState()),
+                    .heightIn(max = 168.dp),
             ) {
-                transactions.forEach { tx ->
+                items(transactions, key = { it.id }) { tx ->
                     TerminalTransactionRow(
                         transaction = tx,
                         debtType = debt.debtType,
@@ -1013,13 +1014,12 @@ private fun TransactionSection(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         } else {
-            Column(
+            LazyColumn(
                 Modifier
                     .fillMaxWidth()
-                    .heightIn(max = 168.dp)
-                    .verticalScroll(rememberScrollState()),
+                    .heightIn(max = 168.dp),
             ) {
-                transactions.forEach { tx ->
+                items(transactions, key = { it.id }) { tx ->
                     TransactionRow(
                         transaction = tx,
                         debtType = debt.debtType,

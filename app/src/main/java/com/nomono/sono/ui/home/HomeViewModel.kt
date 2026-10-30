@@ -16,9 +16,12 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -58,16 +61,21 @@ class HomeViewModel(private val repository: DebtRepository) : ViewModel() {
     private val sortMode = MutableStateFlow(SortMode.RECENT)
     private val debtFilter = MutableStateFlow(DebtFilter.ALL)
     private val searchQuery = MutableStateFlow("")
+    val searchInput: StateFlow<String> = searchQuery.asStateFlow()
+
+    private val debtsWithTotals = repository.observeAll()
+        .distinctUntilChanged()
+        .map { debts -> debts to computeTotals(debts) }
 
     val uiState: StateFlow<HomeUiState> =
         combine(
-            repository.observeAll(),
+            debtsWithTotals,
             sortMode,
             debtFilter,
             // Don't re-filter/sort on every keystroke while typing fast.
-            searchQuery.debounce(150),
-        ) { list, sort, filter, query ->
-            val filtered = list.filterFor(filter)
+            searchQuery.debounce { if (it.isEmpty()) 0L else 150L },
+        ) { (list, totals), sort, filter, query ->
+            val filtered = if (filter == DebtFilter.ALL) list else list.filterFor(filter)
             val q = query.trim()
             val visible = if (q.isEmpty()) {
                 filtered
@@ -85,7 +93,7 @@ class HomeViewModel(private val repository: DebtRepository) : ViewModel() {
                 sortMode = sort,
                 debtFilter = filter,
                 searchQuery = query,
-                totals = computeTotals(list),
+                totals = totals,
             )
         }.flowOn(Dispatchers.Default)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())

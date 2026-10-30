@@ -177,6 +177,7 @@ fun HomeScreen(
 ) {
     val viewModel: HomeViewModel = viewModel(factory = HomeViewModel.factory(repository))
     val state by viewModel.uiState.collectAsState()
+    val searchInput by viewModel.searchInput.collectAsState()
 
     var editingId by rememberSaveable { mutableStateOf<Long?>(null) }
     var showEditor by rememberSaveable { mutableStateOf(false) }
@@ -226,6 +227,7 @@ fun HomeScreen(
     if (isTerminal) {
         TerminalHomeScreen(
             state = state,
+            searchInput = searchInput,
             themeMode = themeMode,
             searchActive = searchActive,
             selectedDebtId = selectedDebtId,
@@ -286,7 +288,7 @@ fun HomeScreen(
                         exit = shrinkVertically(),
                     ) {
                         SearchField(
-                            query = state.searchQuery,
+                            query = searchInput,
                             onQueryChange = viewModel::setSearchQuery,
                             onClose = {
                                 searchActive = false
@@ -384,6 +386,7 @@ fun HomeScreen(
 @Composable
 private fun TerminalHomeScreen(
     state: HomeUiState,
+    searchInput: String,
     themeMode: ThemeMode,
     searchActive: Boolean,
     selectedDebtId: Long?,
@@ -535,7 +538,7 @@ private fun TerminalHomeScreen(
                         color = TerminalOrangeDim,
                     )
                     BasicTextField(
-                        value = state.searchQuery,
+                        value = searchInput,
                         onValueChange = onSearchQueryChange,
                         singleLine = true,
                         textStyle = TextStyle(
@@ -547,7 +550,7 @@ private fun TerminalHomeScreen(
                         cursorBrush = SolidColor(TerminalOrange),
                         modifier = Modifier.weight(1f),
                         decorationBox = { innerTextField ->
-                            if (state.searchQuery.isEmpty()) {
+                            if (searchInput.isEmpty()) {
                                 Text(
                                     text = "NHẬP TÊN...",
                                     fontFamily = VT323FontFamily,
@@ -558,7 +561,7 @@ private fun TerminalHomeScreen(
                             innerTextField()
                         },
                     )
-                    if (state.searchQuery.isNotEmpty()) {
+                    if (searchInput.isNotEmpty()) {
                         Text(
                             text = "[XÓA]",
                             fontFamily = VT323FontFamily,
